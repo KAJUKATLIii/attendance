@@ -1,17 +1,25 @@
-document.getElementById('barcode').addEventListener('input', function(event) {
-    if (event.target.value.length >= 10) { // Adjust length as needed
-        submitAttendance();
-    }
-});
+const { BrowserMultiFormatReader, NotFoundException } = ZXing;
 
-async function submitAttendance() {
-    const barcode = document.getElementById('barcode').value;
-    if (!barcode) {
-        document.getElementById('response').textContent = 'Please scan a barcode.';
-        return;
-    }
+// Initialize ZXing
+const codeReader = new BrowserMultiFormatReader();
+const videoElement = document.getElementById('video');
+const responseElement = document.getElementById('response');
 
-    const date = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+const startScanner = () => {
+    codeReader.decodeFromVideoDevice(null, videoElement, (result, error) => {
+        if (result) {
+            const barcode = result.text;
+            handleBarcode(barcode);
+        }
+        if (error && !(error instanceof NotFoundException)) {
+            console.error(error);
+        }
+    }).catch(err => console.error(err));
+};
+
+// Handle barcode data
+const handleBarcode = async (barcode) => {
+    const date = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
 
     try {
         const response = await fetch('/attendance', {
@@ -23,9 +31,13 @@ async function submitAttendance() {
         });
 
         const result = await response.json();
-        document.getElementById('response').textContent = result.message;
-        document.getElementById('barcode').value = ''; // Clear input field
+        responseElement.textContent = result.message;
     } catch (error) {
-        document.getElementById('response').textContent = 'An error occurred.';
+        responseElement.textContent = 'An error occurred.';
     }
-}
+};
+
+// Start the scanner when the page loads
+window.onload = () => {
+    startScanner();
+};
