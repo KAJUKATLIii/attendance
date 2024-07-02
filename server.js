@@ -28,14 +28,21 @@ app.post('/attendance', async (req, res) => {
 
     const attendanceRecord = `${date},${barcode}\n`;
 
+    // Save to file (consider using a database for production)
     fs.appendFile('attendance.csv', attendanceRecord, (err) => {
         if (err) {
             return res.status(500).json({ message: 'Failed to record attendance' });
         }
 
-        // Send to Discord webhook
+        // Send to Discord webhook with embedded image/gif
         axios.post(DISCORD_WEBHOOK_URL, {
-            content: `Attendance recorded for student ID ${barcode} on ${date}`
+            embeds: [{
+                title: 'Attendance Recorded',
+                description: `Attendance recorded for student ID ${barcode} on ${date}`,
+                image: {
+                    url: 'https://cdn.discordapp.com/attachments/935622008136429588/1257604789882060860/standard.gif'
+                }
+            }]
         })
         .then(() => {
             res.json({ message: 'Attendance recorded and notification sent' });
