@@ -28,7 +28,6 @@ app.post('/attendance', async (req, res) => {
 
     const attendanceRecord = `${date},${barcode}\n`;
 
-    // Save to file (consider using a database for production)
     fs.appendFile('attendance.csv', attendanceRecord, (err) => {
         if (err) {
             return res.status(500).json({ message: 'Failed to record attendance' });
