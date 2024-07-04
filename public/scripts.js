@@ -1,53 +1,67 @@
-const codeReader = new ZXing.BrowserQRCodeReader();
-const videoElement = document.getElementById('video');
-const responseElement = document.getElementById('response');
-let selectedSubject = '';
+// Ensure QR Code library is loaded
+const codeReader = new ZXing.BrowserMultiFormatReader();
 
-// Event listener for subject buttons
-document.querySelectorAll('.subject-button').forEach(button => {
-    button.addEventListener('click', function() {
-        selectedSubject = this.getAttribute('data-subject');
-        document.querySelectorAll('.subject-button').forEach(btn => btn.classList.remove('selected'));
-        this.classList.add('selected');
-        responseElement.innerText = `Selected Subject: ${selectedSubject}`;
-    });
-});
+// Function to initialize video and QR code scanning
+async function initializeScanner() {
+    const videoElement = document.getElementById('video');
+    try {
+        // Get available video input devices
+        const devices = await codeReader.listVideoInputDevices();
+        if (devices.length === 0) {
+            throw new Error('No video input devices found.');
+        }
 
-// Function to start scanning
-function startScanning() {
-    codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
-        if (result) {
-            const scannedData = JSON.parse(result.text);
-
-            if (selectedSubject) {
-                fetch('/scan', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name: scannedData.name,
-                        branch: scannedData.branch,
-                        subject: selectedSubject
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    responseElement.innerText = data.message;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    responseElement.innerText = 'Failed to record attendance';
-                });
-            } else {
-                responseElement.innerText = 'Please select a subject first.';
+        // Use the first available device
+        const selectedDeviceId = devices[0].deviceId;
+        codeReader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, error) => {
+            if (result) {
+                handleScanResult(result.text);
             }
-        }
-        if (err) {
-            console.error(err);
-            responseElement.innerText = 'Error scanning QR code.';
-        }
-    });
+            if (error) {
+                console.error('Error decoding QR code:', error);
+            }
+        });
+    } catch (error) {
+        console.error('Error initializing QR code scanner:', error);
+    }
 }
 
-startScanning();
+// Handle scan result
+function handleScanResult(data) {
+    console.log('QR Code Data:', data);
+
+    // Split data based on your QR code format
+    // For example, assuming format: "name,branch,subject"
+    const [name, branch, subject] = data.split(',');
+
+    // Validate and send data to server
+    if (name && branch && subject) {
+        sendScanData({ name, branch, subject });
+    } else {
+        console.error('Invalid QR code data format.');
+    }
+}
+
+// Send scanned data to server
+async function sendScanData(data) {
+    try {
+        const response = await fetch('/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (response.ok) {
+            document.getElementById('response').innerText = result.message;
+        } else {
+            console.error('Error sending scan data:', result.error);
+            document.getElementById('response').innerText = 'Failed to record attendance.';
+        }
+    } catch (error) {
+        console.error('Network error:', error);
+        document.getElementById('response').innerText = 'Network error. Please try again.';
+    }
+}
+
+// Initialize the QR code scanner when the page loads
+window.addEventListener('load', initializeScanner);
