@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 3000;
 
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
@@ -20,13 +20,13 @@ app.get('/', (req, res) => {
 
 // Handle attendance submission
 app.post('/attendance', async (req, res) => {
-    const { barcode, date } = req.body;
+    const { barcode, date, branch, name } = req.body;
 
-    if (!barcode || !date) {
+    if (!barcode || !date || !branch || !name) {
         return res.status(400).json({ message: 'Invalid data' });
     }
 
-    const attendanceRecord = `${date},${barcode}\n`;
+    const attendanceRecord = `${date},${barcode},${branch},${name}\n`;
 
     // Save to file (consider using a database for production)
     fs.appendFile('attendance.csv', attendanceRecord, (err) => {
@@ -34,15 +34,24 @@ app.post('/attendance', async (req, res) => {
             return res.status(500).json({ message: 'Failed to record attendance' });
         }
 
-        // Send to Discord webhook
+        // For demonstration, setting a placeholder attendance percentage
+        const attendancePercentage = '75%'; // Replace with actual calculation
+
+        // Send to Discord webhook with embedded image/gif
         axios.post(DISCORD_WEBHOOK_URL, {
-            content: `Attendance recorded for student ID ${barcode} on ${date}`
+            embeds: [{
+                title: 'Attendance Report',
+                description: `**College Name**: RUNGTA\n**Branch**: ${branch}\n**Attendance Percentage**: ${attendancePercentage}\n**Scanned ID**: ${barcode}\n**Date**: ${date}`,
+                image: {
+                    url: 'https://cdn.discordapp.com/attachments/935622008136429588/1257604789882060860/standard.gif'
+                }
+            }]
         })
         .then(() => {
-            res.json({ message: 'Attendance recorded and notification sent' });
+            res.json({ message: 'Attendance Recorded And Notification Sent📤' });
         })
         .catch(() => {
-            res.status(500).json({ message: 'Failed to send notification' });
+            res.status(500).json({ message: 'Failed To Send Notification⛔' });
         });
     });
 });
