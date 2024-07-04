@@ -5,20 +5,22 @@ const codeReader = new BrowserMultiFormatReader();
 const videoElement = document.getElementById('video');
 const responseElement = document.getElementById('response');
 
+// Start barcode scanning
 const startScanner = () => {
     codeReader.decodeFromVideoDevice(null, videoElement, (result, error) => {
         if (result) {
             const barcode = result.text;
-            handleBarcode(barcode);
+            const branch = 'BCA 2nd Yr'; // Replace with dynamic branch info if needed
+            handleBarcode(barcode, branch);
         }
         if (error && !(error instanceof NotFoundException)) {
             console.error(error);
         }
-    }).catch(err => console.error(err));
+    }).catch(err => console.error('Error:', err));
 };
 
 // Handle barcode data
-const handleBarcode = async (barcode) => {
+const handleBarcode = async (barcode, branch) => {
     const date = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
 
     try {
@@ -27,7 +29,7 @@ const handleBarcode = async (barcode) => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ barcode, date })
+            body: JSON.stringify({ barcode, date, branch })
         });
 
         const result = await response.json();
