@@ -4,7 +4,7 @@
   "description": "A Discord bot for tracking student attendance",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "axios": "^0.27.2",
