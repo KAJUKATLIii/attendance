@@ -1,43 +1,62 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
+    background-color: #f0f0f0;
 }
 
 .container {
+    text-align: center;
     background: #fff;
     padding: 20px;
-    border-radius: 5px;
+    border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    text-align: center;
+    width: 90%;
+    max-width: 800px;
 }
 
-input[type="text"] {
+h1 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+video {
     width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    max-width: 600px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 20px;
 }
 
-button {
+.buttons {
+    margin-top: 20px;
+}
+
+.subject-button {
+    font-size: 16px;
     padding: 10px 20px;
+    margin: 5px;
     border: none;
-    background-color: #28a745;
-    color: #fff;
     border-radius: 5px;
+    color: #fff;
+    background-color: #007bff;
     cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-button:hover {
-    background-color: #218838;
+.subject-button:hover {
+    background-color: #0056b3;
+}
+
+.selected {
+    background-color: #0056b3;
 }
 
 #response {
     margin-top: 20px;
     font-size: 18px;
+    color: #333;
 }
