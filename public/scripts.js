@@ -1,45 +1,47 @@
-const { BrowserMultiFormatReader, NotFoundException } = ZXing;
-
-// Initialize ZXing
-const codeReader = new BrowserMultiFormatReader();
+const codeReader = new ZXing.BrowserQRCodeReader();
 const videoElement = document.getElementById('video');
 const responseElement = document.getElementById('response');
+let selectedSubject = '';
 
-// Start barcode scanning
-const startScanner = () => {
-    codeReader.decodeFromVideoDevice(null, videoElement, (result, error) => {
+// Event listener for subject buttons
+document.querySelectorAll('.subject-button').forEach(button => {
+    button.addEventListener('click', function() {
+        selectedSubject = this.getAttribute('data-subject');
+        document.querySelectorAll('.subject-button').forEach(btn => btn.classList.remove('selected'));
+        this.classList.add('selected');
+        responseElement.innerText = `Selected Subject: ${selectedSubject}`;
+    });
+});
+
+// Function to start scanning
+function startScanning() {
+    codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
         if (result) {
-            const barcode = result.text;
-            const branch = 'BCA 2nd Yr'; // Replace with dynamic branch info if needed
-            handleBarcode(barcode, branch);
+            const scannedData = JSON.parse(result.text);
+
+            if (selectedSubject) {
+                fetch('/scan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: scannedData.name,
+                        branch: scannedData.branch,
+                        subject: selectedSubject
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    responseElement.innerText = data.message;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    responseElement.innerText = 'Failed to record attendance';
+                });
+            } else {
+                responseElement.innerText = 'Please select a subject first.';
+            }
         }
-        if (error && !(error instanceof NotFoundException)) {
-            console.error(error);
-        }
-    }).catch(err => console.error('Error:', err));
-};
-
-// Handle barcode data
-const handleBarcode = async (barcode, branch) => {
-    const date = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
-
-    try {
-        const response = await fetch('/attendance', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ barcode, date, branch })
-        });
-
-        const result = await response.json();
-        responseElement.textContent = result.message;
-    } catch (error) {
-        responseElement.textContent = 'An error occurred.';
-    }
-};
-
-// Start the scanner when the page loads
-window.onload = () => {
-    startScanner();
-};
+        if (err) {
+            console.error
