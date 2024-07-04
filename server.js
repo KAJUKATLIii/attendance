@@ -103,7 +103,7 @@ app.post('/scan', async (req, res) => {
         };
 
         try {
-            const fetch = (await import('node-fetch')).default;
+            const { default: fetch } = await import('node-fetch');
             const response = await fetch(DISCORD_WEBHOOK_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
