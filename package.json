@@ -1,32 +1,18 @@
 {
-  "name": "attendance-bot",
+  "name": "attendance-web-app",
   "version": "1.0.0",
-  "description": "A Discord bot for tracking student attendance",
-  "main": "bot.js",
+  "description": "Web app for student attendance with barcode scanning.",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    },
+    "bot": "node bot.js"
+  },
   "dependencies": {
-    "express": "^4.17.1",
+    "axios": "^0.21.1",
     "body-parser": "^1.19.0",
-    "axios": "^0.27.2",
-    "fs": "^0.0.1-security",
-    "path": "^0.12.7",
-    "discord.js": "^14.6.0",
     "csv-parser": "^3.0.0",
-    "dotenv": "^16.0.3"
-  },
-  "engines": {
-    "node": ">=16.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/KAJUKATLIii/attendance.git"
-  },
-  "author": "Your Name",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/KAJUKATLIii/attendance/issues"
-  },
-  "homepage": "https://github.com/KAJUKATLIii/attendance#readme"
+    "discord.js": "^14.6.0",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1"
+  }
 }
