@@ -5,9 +5,11 @@ const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits } = require('discord.js');
 
+// Initialize express app
 const app = express();
 const port = process.env.PORT || 10000;
 
+// Initialize Discord client
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -16,14 +18,17 @@ const client = new Client({
     ]
 });
 
+// Discord bot and webhook configurations
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const ATTENDANCE_FILE = path.join(__dirname, 'attendance.csv');
 
+// Discord bot ready event
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
 });
 
+// Discord bot message event
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
@@ -59,10 +64,16 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+// Login to Discord
 client.login(DISCORD_BOT_TOKEN);
 
+// Middleware to serve static files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Middleware for JSON body parsing
 app.use(bodyParser.json());
 
+// Scan route
 app.post('/scan', async (req, res) => {
     const { name, branch, subject } = req.body;
     const date = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
@@ -107,6 +118,7 @@ app.post('/scan', async (req, res) => {
     });
 });
 
+// Start the server
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
