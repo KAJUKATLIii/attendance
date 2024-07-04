@@ -1,69 +1,16 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { Client, GatewayIntentBits } = require('discord.js');
-const axios = require('axios');
+const csv = require('csv-parser');
 
-// Initialize express app
 const app = express();
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 3000;
 
-// Initialize Discord client
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
-});
-
-// Discord bot and webhook configurations
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const ATTENDANCE_FILE = path.join(__dirname, 'attendance.csv');
-
-// Discord bot ready event
-client.once('ready', () => {
-    console.log(`Logged in as ${client.user.tag}`);
-});
-
-// Discord bot message event
-client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
-
-    const args = message.content.split(' ');
-    const command = args.shift().toLowerCase();
-
-    if (command === '!attendance') {
-        const barcode = args[0];
-        if (!barcode) {
-            return message.reply('Please provide a barcode.');
-        }
-
-        const attendanceData = [];
-
-        fs.createReadStream(ATTENDANCE_FILE)
-            .pipe(require('csv-parser')())
-            .on('data', (row) => {
-                if (row.barcode === barcode) {
-                    attendanceData.push(row);
-                }
-            })
-            .on('end', () => {
-                const attendanceCount = attendanceData.length;
-                message.reply(`${barcode} was recorded for ${attendanceCount} days.`);
-            })
-            .on('error', (error) => {
-                console.error('Error reading attendance file:', error);
-                message.reply('An error occurred while reading the attendance file.');
-            });
-    }
-});
-
-// Login to Discord
-client.login(DISCORD_BOT_TOKEN);
 
 // Middleware to serve static files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -71,27 +18,32 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Middleware for JSON body parsing
 app.use(bodyParser.json());
 
-// Scan route
-app.post('/scan', async (req, res) => {
-    const { barcode, branch, date, subject } = req.body;
+// Serve the main HTML page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
-    if (!barcode || !branch || !date || !subject) {
-        return res.status(400).json({ error: 'Missing required fields' });
+// Handle attendance submission
+app.post('/attendance', async (req, res) => {
+    const { barcode, date, branch } = req.body;
+
+    if (!barcode || !date || !branch) {
+        return res.status(400).json({ message: 'Invalid data' });
     }
 
     const attendanceRecord = `${date},${barcode},${branch}\n`;
 
+    // Save to file (consider using a database for production)
     fs.appendFile(ATTENDANCE_FILE, attendanceRecord, async (err) => {
         if (err) {
-            console.error('Error appending to attendance file:', err);
-            return res.status(500).json({ error: 'Failed to record attendance' });
+            return res.status(500).json({ message: 'Failed to record attendance' });
         }
 
         // Calculate attendance percentage (dummy implementation)
         const totalDays = 30; // Example total days
         const attendanceData = [];
         fs.createReadStream(ATTENDANCE_FILE)
-            .pipe(require('csv-parser')())
+            .pipe(csv())
             .on('data', (row) => {
                 if (row.barcode === barcode) {
                     attendanceData.push(row);
@@ -110,9 +62,7 @@ app.post('/scan', async (req, res) => {
                 };
 
                 try {
-                    await axios.post(DISCORD_WEBHOOK_URL, {
-                        embeds: [embed]
-                    });
+                    await axios.post(DISCORD_WEBHOOK_URL, { embeds: [embed] });
                     res.status(200).json({ message: 'Attendance recorded and notification sent successfully' });
                 } catch (error) {
                     console.error('Error sending webhook:', error);
