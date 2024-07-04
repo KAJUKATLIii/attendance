@@ -20,13 +20,13 @@ app.get('/', (req, res) => {
 
 // Handle attendance submission
 app.post('/attendance', async (req, res) => {
-    const { barcode, date, branch } = req.body;
+    const { barcode, date, branch, name } = req.body;
 
-    if (!barcode || !date || !branch) {
+    if (!barcode || !date || !branch || !name) {
         return res.status(400).json({ message: 'Invalid data' });
     }
 
-    const attendanceRecord = `${date},${barcode},${branch}\n`;
+    const attendanceRecord = `${date},${barcode},${branch},${name}\n`;
 
     // Save to file (consider using a database for production)
     fs.appendFile('attendance.csv', attendanceRecord, (err) => {
