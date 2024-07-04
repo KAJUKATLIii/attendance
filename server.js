@@ -7,7 +7,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const fetch = require('node-fetch');  // Ensure you have node-fetch installed (npm install node-fetch)
 
 const app = express();
-const port = process.env.PORT || ;
+const port = process.env.PORT ||10000;
 
 const client = new Client({
     intents: [
