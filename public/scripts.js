@@ -1,6 +1,8 @@
 // Ensure QR Code library is loaded
 const codeReader = new ZXing.BrowserMultiFormatReader();
 
+let selectedSubject = '';
+
 // Function to initialize video and QR code scanning
 async function initializeScanner() {
     const videoElement = document.getElementById('video');
@@ -31,14 +33,14 @@ function handleScanResult(data) {
     console.log('QR Code Data:', data);
 
     // Split data based on your QR code format
-    // For example, assuming format: "name,branch,subject"
-    const [name, branch, subject] = data.split(',');
+    // For example, assuming format: "name,branch"
+    const [name, branch] = data.split(',');
 
     // Validate and send data to server
-    if (name && branch && subject) {
-        sendScanData({ name, branch, subject });
+    if (name && branch && selectedSubject) {
+        sendScanData({ name, branch, subject: selectedSubject });
     } else {
-        console.error('Invalid QR code data format.');
+        console.error('Invalid QR code data format or no subject selected.');
     }
 }
 
@@ -62,6 +64,16 @@ async function sendScanData(data) {
         document.getElementById('response').innerText = 'Network error. Please try again.';
     }
 }
+
+// Handle subject button clicks
+document.querySelectorAll('.subject-button').forEach(button => {
+    button.addEventListener('click', () => {
+        selectedSubject = button.getAttribute('data-subject');
+        document.querySelectorAll('.subject-button').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        console.log(`Selected Subject: ${selectedSubject}`);
+    });
+});
 
 // Initialize the QR code scanner when the page loads
 window.addEventListener('load', initializeScanner);
