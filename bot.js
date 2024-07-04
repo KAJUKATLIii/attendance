@@ -1,10 +1,17 @@
-require('dotenv').config();
-const { Client, GatewayIntentBits } = require('discord.js');
-const fs = require('fs');
-const csv = require('csv-parser');
+import { Client, GatewayIntentBits } from 'discord.js';
+import fs from 'fs';
+import csv from 'csv-parser';
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+// Initialize Discord client
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
+});
 
+// Discord bot token
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 
 client.once('ready', () => {
@@ -35,8 +42,13 @@ client.on('messageCreate', async (message) => {
             .on('end', () => {
                 const attendanceCount = attendanceData.length;
                 message.reply(`${studentName} was present for ${attendanceCount} days.`);
+            })
+            .on('error', (error) => {
+                console.error('Error reading attendance file:', error);
+                message.reply('An error occurred while reading the attendance file.');
             });
     }
 });
 
+// Login to Discord
 client.login(DISCORD_BOT_TOKEN);
