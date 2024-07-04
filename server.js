@@ -1,13 +1,13 @@
-require('dotenv').config(); // Load environment variables
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits } = require('discord.js');
-const fetch = require('node-fetch');  // Ensure you have node-fetch installed (`npm install node-fetch`)
+const fetch = require('node-fetch');  // Ensure you have node-fetch installed (npm install node-fetch)
 
 const app = express();
-const port = process.env.PORT || 3000; // Use the environment variable PORT or default to 3000
+const port = process.env.PORT || 3000;
 
 const client = new Client({
     intents: [
@@ -22,7 +22,7 @@ const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const ATTENDANCE_FILE = path.join(__dirname, 'attendance.csv');
 
 client.once('ready', () => {
-    console.log(`Logged in as ${client.user.tag}`);
+    console.log(Logged in as ${client.user.tag});
 });
 
 client.on('messageCreate', async (message) => {
@@ -51,7 +51,7 @@ client.on('messageCreate', async (message) => {
             })
             .on('end', () => {
                 const attendanceCount = attendanceData.length;
-                message.reply(`${studentName} was present for ${attendanceCount} days.`);
+                message.reply(${studentName} was present for ${attendanceCount} days.);
             })
             .on('error', (error) => {
                 console.error('Error reading attendance file:', error);
@@ -72,7 +72,7 @@ app.post('/scan', (req, res) => {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const attendanceData = `${name},${branch},${date},${subject},Present\n`;
+    const attendanceData = ${name},${branch},${date},${subject},Present\n;
 
     fs.appendFile(ATTENDANCE_FILE, attendanceData, (err) => {
         if (err) {
@@ -109,5 +109,5 @@ app.post('/scan', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+    console.log(Server running on port ${port});
+})
