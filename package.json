@@ -4,7 +4,7 @@
   "description": "Web app for student attendance with barcode scanning.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "concurrently \"node server.js\" \"node bot.js\""
   },
   "dependencies": {
     "axios": "^0.21.1",
