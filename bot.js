@@ -29,9 +29,9 @@ client.on('messageCreate', async (message) => {
     const command = args.shift().toLowerCase();
 
     if (command === '!attendance') {
-        const studentName = args.join(' ');
-        if (!studentName) {
-            return message.reply('Please provide a student name.');
+        const studentId = args.join(' ');
+        if (!studentId) {
+            return message.reply('Please provide a student ID.');
         }
 
         const attendanceData = [];
@@ -39,16 +39,16 @@ client.on('messageCreate', async (message) => {
         fs.createReadStream(ATTENDANCE_FILE)
             .pipe(csv())
             .on('data', (row) => {
-                if (row.name === studentName) {
+                if (row.barcode === studentId) {
                     attendanceData.push(row);
                 }
             })
             .on('end', () => {
                 const attendanceCount = attendanceData.length;
                 if (attendanceCount > 0) {
-                    message.reply(`${studentName} was present for ${attendanceCount} days.`);
+                    message.reply(`${studentId} was present for ${attendanceCount} days.`);
                 } else {
-                    message.reply(`${studentName} has no recorded attendance.`);
+                    message.reply(`${studentId} has no recorded attendance.`);
                 }
             })
             .on('error', (error) => {
