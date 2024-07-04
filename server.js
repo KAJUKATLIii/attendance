@@ -4,10 +4,9 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits } = require('discord.js');
-const fetch = require('node-fetch');  // Ensure you have node-fetch installed (`npm install node-fetch`)
 
 const app = express();
-const port = 10000; // Explicitly set the port to 10000
+const port = process.env.PORT || 10000;
 
 const client = new Client({
     intents: [
@@ -21,12 +20,10 @@ const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const ATTENDANCE_FILE = path.join(__dirname, 'attendance.csv');
 
-// Initialize Discord Bot
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
 });
 
-// Handle messages in Discord
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
@@ -64,11 +61,9 @@ client.on('messageCreate', async (message) => {
 
 client.login(DISCORD_BOT_TOKEN);
 
-// Middleware for parsing JSON
 app.use(bodyParser.json());
 
-// Endpoint for scanning attendance
-app.post('/scan', (req, res) => {
+app.post('/scan', async (req, res) => {
     const { name, branch, subject } = req.body;
     const date = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
 
@@ -78,7 +73,7 @@ app.post('/scan', (req, res) => {
 
     const attendanceData = `${name},${branch},${date},${subject},Present\n`;
 
-    fs.appendFile(ATTENDANCE_FILE, attendanceData, (err) => {
+    fs.appendFile(ATTENDANCE_FILE, attendanceData, async (err) => {
         if (err) {
             console.error('Error appending to attendance file:', err);
             return res.status(500).json({ error: 'Failed to record attendance' });
@@ -96,23 +91,22 @@ app.post('/scan', (req, res) => {
             image: { url: 'https://cdn.discordapp.com/attachments/935622008136429588/1257604789882060860/standard.gif?ex=6685033b&is=6683b1bb&hm=3bde77e68241f376a083ef720b98470bdd1f539aae92f2e32a7d04b1393c923f&' }
         };
 
-        fetch(DISCORD_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ embeds: [embed] })
-        })
-        .then(response => response.json())
-        .then(() => {
+        try {
+            const fetch = (await import('node-fetch')).default;
+            const response = await fetch(DISCORD_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ embeds: [embed] })
+            });
+            await response.json();
             res.status(200).json({ message: 'Attendance recorded successfully' });
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error sending webhook:', error);
             res.status(500).json({ error: 'Failed to send webhook' });
-        });
+        }
     });
 });
 
-// Start the server
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`Server running on port ${port}`);
 });
