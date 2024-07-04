@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config(); // Load environment variables
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
@@ -7,7 +7,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const fetch = require('node-fetch');  // Ensure you have node-fetch installed (`npm install node-fetch`)
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000; // Use the environment variable PORT or default to 3000
 
 const client = new Client({
     intents: [
@@ -109,5 +109,5 @@ app.post('/scan', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log(`Server is running on port ${port}`);
 });
