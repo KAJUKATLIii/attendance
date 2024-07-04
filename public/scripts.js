@@ -1,15 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
     const video = document.getElementById('video');
-    const barcodeInput = document.getElementById('barcode');
     const scanButton = document.getElementById('scan-button');
     const responseDiv = document.getElementById('response');
 
-    const codeReader = new ZXing.BrowserBarcodeReader();
+    let codeReader = new ZXing.BrowserBarcodeReader();
+    
     codeReader.listVideoInputDevices().then((videoInputDevices) => {
         const firstDeviceId = videoInputDevices[0].deviceId;
         codeReader.decodeOnceFromVideoDevice(firstDeviceId, 'video').then((result) => {
-            barcodeInput.value = result.text;
-            responseDiv.innerText = `Scanned Barcode: ${result.text}`;
+            handleScanResult(result.text);
         }).catch((err) => {
             console.error(err);
             responseDiv.innerText = 'Error scanning QR code.';
@@ -19,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     scanButton.addEventListener('click', () => {
-        const barcode = barcodeInput.value;
+        const barcode = responseDiv.innerText; // Barcode/QR code result is displayed in responseDiv
         const subject = document.querySelector('.subject-button.active')?.dataset.subject;
 
         if (!barcode || !subject) {
@@ -50,4 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
             button.classList.add('active');
         });
     });
+
+    function handleScanResult(resultText) {
+        responseDiv.innerText = `Scanned Barcode/QR Code: ${resultText}`;
+        // You may call the scan button handler or any other function if required here
+    }
 });
