@@ -44,4 +44,10 @@ function startScanning() {
             }
         }
         if (err) {
-            console.error
+            console.error(err);
+            responseElement.innerText = 'Error scanning QR code.';
+        }
+    });
+}
+
+startScanning();
