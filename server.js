@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits } = require('discord.js');
+const axios = require('axios');
 
 // Initialize express app
 const app = express();
@@ -36,26 +37,23 @@ client.on('messageCreate', async (message) => {
     const command = args.shift().toLowerCase();
 
     if (command === '!attendance') {
-        const studentName = args.join(' ');
-        if (!studentName) {
-            return message.reply('Please provide a student name.');
-        }
-
-        if (!fs.existsSync(ATTENDANCE_FILE)) {
-            return message.reply('Attendance file not found.');
+        const barcode = args[0];
+        if (!barcode) {
+            return message.reply('Please provide a barcode.');
         }
 
         const attendanceData = [];
+
         fs.createReadStream(ATTENDANCE_FILE)
             .pipe(require('csv-parser')())
             .on('data', (row) => {
-                if (row.name === studentName) {
+                if (row.barcode === barcode) {
                     attendanceData.push(row);
                 }
             })
             .on('end', () => {
                 const attendanceCount = attendanceData.length;
-                message.reply(`${studentName} was present for ${attendanceCount} days.`);
+                message.reply(`${barcode} was recorded for ${attendanceCount} days.`);
             })
             .on('error', (error) => {
                 console.error('Error reading attendance file:', error);
@@ -75,46 +73,52 @@ app.use(bodyParser.json());
 
 // Scan route
 app.post('/scan', async (req, res) => {
-    const { name, branch, subject } = req.body;
-    const date = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+    const { barcode, branch, date, subject } = req.body;
 
-    if (!name || !branch || !subject) {
+    if (!barcode || !branch || !date || !subject) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const attendanceData = `${name},${branch},${date},${subject},Present\n`;
+    const attendanceRecord = `${date},${barcode},${branch}\n`;
 
-    fs.appendFile(ATTENDANCE_FILE, attendanceData, async (err) => {
+    fs.appendFile(ATTENDANCE_FILE, attendanceRecord, async (err) => {
         if (err) {
             console.error('Error appending to attendance file:', err);
             return res.status(500).json({ error: 'Failed to record attendance' });
         }
 
-        // Send data to Discord webhook
-        const embed = {
-            title: 'Student Attendance Recorded',
-            fields: [
-                { name: 'Student Name', value: name },
-                { name: 'Branch', value: branch },
-                { name: 'Subject', value: subject },
-                { name: 'Date', value: date }
-            ],
-            image: { url: 'https://cdn.discordapp.com/attachments/935622008136429588/1257604789882060860/standard.gif?ex=6685033b&is=6683b1bb&hm=3bde77e68241f376a083ef720b98470bdd1f539aae92f2e32a7d04b1393c923f&' }
-        };
+        // Calculate attendance percentage (dummy implementation)
+        const totalDays = 30; // Example total days
+        const attendanceData = [];
+        fs.createReadStream(ATTENDANCE_FILE)
+            .pipe(require('csv-parser')())
+            .on('data', (row) => {
+                if (row.barcode === barcode) {
+                    attendanceData.push(row);
+                }
+            })
+            .on('end', async () => {
+                const attendanceCount = attendanceData.length;
+                const attendancePercentage = ((attendanceCount / totalDays) * 100).toFixed(2);
 
-        try {
-            const { default: fetch } = await import('node-fetch');
-            const response = await fetch(DISCORD_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ embeds: [embed] })
+                const embed = {
+                    title: 'Attendance Report',
+                    description: `**College Name**: RUNGTA\n**Branch**: ${branch}\n**Attendance Percentage**: ${attendancePercentage}%\n**Scanned ID**: ${barcode}\n**Date**: ${date}`,
+                    image: {
+                        url: 'https://cdn.discordapp.com/attachments/935622008136429588/1257604789882060860/standard.gif'
+                    }
+                };
+
+                try {
+                    await axios.post(DISCORD_WEBHOOK_URL, {
+                        embeds: [embed]
+                    });
+                    res.status(200).json({ message: 'Attendance recorded and notification sent successfully' });
+                } catch (error) {
+                    console.error('Error sending webhook:', error);
+                    res.status(500).json({ error: 'Failed to send webhook' });
+                }
             });
-            await response.json();
-            res.status(200).json({ message: 'Attendance recorded successfully' });
-        } catch (error) {
-            console.error('Error sending webhook:', error);
-            res.status(500).json({ error: 'Failed to send webhook' });
-        }
     });
 });
 
