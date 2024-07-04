@@ -1,62 +1,70 @@
-import jsQR from 'jsqr'; // Ensure jsqr is installed (`npm install jsqr`)
+const { BrowserMultiFormatReader, NotFoundException } = ZXing;
 
-const fileInput = document.getElementById('fileInput');
-const statusDiv = document.getElementById('status');
-const scannerContainer = document.getElementById('scanner-container');
+const codeReader = new BrowserMultiFormatReader();
+const videoElement = document.getElementById('video');
+const responseElement = document.getElementById('response');
 
-fileInput.addEventListener('change', handleFileSelect);
+let currentSubject = '';
 
-function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0, img.width, img.height);
-
-                const imageData = ctx.getImageData(0, 0, img.width, img.height);
-                const code = jsQR(imageData.data, img.width, img.height);
-
-                if (code) {
-                    const barcode = code.data;
-                    statusDiv.innerText = `Barcode detected: ${barcode}`;
-                    submitAttendance(barcode);
-                } else {
-                    statusDiv.innerText = 'No QR code or barcode found.';
+const startScanning = () => {
+    codeReader.listVideoInputDevices()
+        .then((videoInputDevices) => {
+            const firstDeviceId = videoInputDevices[0].deviceId;
+            codeReader.decodeFromVideoDevice(firstDeviceId, videoElement, (result, err) => {
+                if (result) {
+                    const barcode = result.text;
+                    handleScanResult(barcode);
                 }
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-async function submitAttendance(barcode) {
-    const date = new Date().toISOString().split('T')[0];
-    const branch = 'Default Branch'; // Update as necessary
-
-    try {
-        const response = await fetch('/attendance', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ barcode, date, branch })
+                if (err && !(err instanceof NotFoundException)) {
+                    console.error(err);
+                }
+            });
+        })
+        .catch((err) => {
+            console.error(err);
         });
+};
 
-        const result = await response.json();
-        if (response.ok) {
-            statusDiv.innerText = result.message;
-        } else {
-            statusDiv.innerText = `Error: ${result.message}`;
-        }
-    } catch (error) {
-        console.error('Error submitting attendance:', error);
-        statusDiv.innerText = 'Error submitting attendance.';
-    }
-}
+const handleScanResult = (barcode) => {
+    console.log('Scanned Barcode:', barcode);
+    // Display scanned barcode on the screen
+    responseElement.textContent = `Scanned Barcode: ${barcode}`;
+
+    // Send the barcode data to the server
+    const data = {
+        barcode: barcode,
+        date: new Date().toISOString().split('T')[0],
+        branch: currentSubject
+    };
+
+    fetch('/attendance', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Success:', data);
+        responseElement.textContent = `Attendance recorded successfully for Barcode: ${barcode}`;
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        responseElement.textContent = 'Failed to record attendance';
+    });
+};
+
+const setSubject = (subject) => {
+    currentSubject = subject;
+};
+
+document.querySelectorAll('.subject-button').forEach(button => {
+    button.addEventListener('click', (event) => {
+        setSubject(event.target.dataset.subject);
+        responseElement.textContent = `Subject set to ${event.target.textContent}`;
+    });
+});
+
+// Start scanning when the page loads
+startScanning();
