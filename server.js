@@ -4,10 +4,10 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits } = require('discord.js');
-const fetch = require('node-fetch');  // Ensure you have node-fetch installed (npm install node-fetch)
+const fetch = require('node-fetch');  // Ensure you have node-fetch installed (`npm install node-fetch`)
 
 const app = express();
-const port = process.env.PORT || 10000;
+const port = 10000; // Explicitly set the port to 10000
 
 const client = new Client({
     intents: [
@@ -21,10 +21,12 @@ const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const ATTENDANCE_FILE = path.join(__dirname, 'attendance.csv');
 
+// Initialize Discord Bot
 client.once('ready', () => {
-    console.log(Logged in as ${client.user.tag});
+    console.log(`Logged in as ${client.user.tag}`);
 });
 
+// Handle messages in Discord
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
@@ -51,7 +53,7 @@ client.on('messageCreate', async (message) => {
             })
             .on('end', () => {
                 const attendanceCount = attendanceData.length;
-                message.reply(${studentName} was present for ${attendanceCount} days.);
+                message.reply(`${studentName} was present for ${attendanceCount} days.`);
             })
             .on('error', (error) => {
                 console.error('Error reading attendance file:', error);
@@ -62,8 +64,10 @@ client.on('messageCreate', async (message) => {
 
 client.login(DISCORD_BOT_TOKEN);
 
+// Middleware for parsing JSON
 app.use(bodyParser.json());
 
+// Endpoint for scanning attendance
 app.post('/scan', (req, res) => {
     const { name, branch, subject } = req.body;
     const date = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
@@ -72,7 +76,7 @@ app.post('/scan', (req, res) => {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const attendanceData = ${name},${branch},${date},${subject},Present\n;
+    const attendanceData = `${name},${branch},${date},${subject},Present\n`;
 
     fs.appendFile(ATTENDANCE_FILE, attendanceData, (err) => {
         if (err) {
@@ -108,6 +112,7 @@ app.post('/scan', (req, res) => {
     });
 });
 
+// Start the server
 app.listen(port, () => {
-    console.log(Server running on port ${port});
-})
+    console.log(`Server is running on port ${port}`);
+});
