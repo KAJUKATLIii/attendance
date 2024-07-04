@@ -48,10 +48,10 @@ app.post('/attendance', async (req, res) => {
             }]
         })
         .then(() => {
-            res.json({ message: 'Attendance recorded and notification sent' });
+            res.json({ message: 'Attendance Recorded And Notification Sent📤' });
         })
         .catch(() => {
-            res.status(500).json({ message: 'Failed to send notification' });
+            res.status(500).json({ message: 'Failed To Send Notification⛔' });
         });
     });
 });
