@@ -7,7 +7,7 @@ const path = require('path');
 const csv = require('csv-parser');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 10000;
 
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const ATTENDANCE_FILE = path.join(__dirname, 'attendance.csv');
