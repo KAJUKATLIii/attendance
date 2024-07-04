@@ -1,62 +1,113 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
-const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { Client, GatewayIntentBits } = require('discord.js');
+const fetch = require('node-fetch');  // Ensure you have node-fetch installed (`npm install node-fetch`)
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-
-// Middleware
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Serve the main HTML page
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 
-// Handle attendance submission
-app.post('/attendance', async (req, res) => {
-    const { barcode, date, branch, name } = req.body;
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const ATTENDANCE_FILE = path.join(__dirname, 'attendance.csv');
 
-    if (!barcode || !date || !branch || !name) {
-        return res.status(400).json({ message: 'Invalid data' });
-    }
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}`);
+});
 
-    const attendanceRecord = `${date},${barcode},${branch},${name}\n`;
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
 
-    // Save to file (consider using a database for production)
-    fs.appendFile('attendance.csv', attendanceRecord, (err) => {
-        if (err) {
-            return res.status(500).json({ message: 'Failed to record attendance' });
+    const args = message.content.split(' ');
+    const command = args.shift().toLowerCase();
+
+    if (command === '!attendance') {
+        const studentName = args.join(' ');
+        if (!studentName) {
+            return message.reply('Please provide a student name.');
         }
 
-        // For demonstration, setting a placeholder attendance percentage
-        const attendancePercentage = '75%'; // Replace with actual calculation
+        if (!fs.existsSync(ATTENDANCE_FILE)) {
+            return message.reply('Attendance file not found.');
+        }
 
-        // Send to Discord webhook with embedded image/gif
-        axios.post(DISCORD_WEBHOOK_URL, {
-            embeds: [{
-                title: 'Attendance Report',
-                description: `**College Name**: RUNGTA\n**Branch**: ${branch}\n**Attendance Percentage**: ${attendancePercentage}\n**Scanned ID**: ${barcode}\n**Date**: ${date}`,
-                image: {
-                    url: 'https://cdn.discordapp.com/attachments/935622008136429588/1257604789882060860/standard.gif'
+        const attendanceData = [];
+        fs.createReadStream(ATTENDANCE_FILE)
+            .pipe(require('csv-parser')())
+            .on('data', (row) => {
+                if (row.name === studentName) {
+                    attendanceData.push(row);
                 }
-            }]
+            })
+            .on('end', () => {
+                const attendanceCount = attendanceData.length;
+                message.reply(`${studentName} was present for ${attendanceCount} days.`);
+            })
+            .on('error', (error) => {
+                console.error('Error reading attendance file:', error);
+                message.reply('An error occurred while reading the attendance file.');
+            });
+    }
+});
+
+client.login(DISCORD_BOT_TOKEN);
+
+app.use(bodyParser.json());
+
+app.post('/scan', (req, res) => {
+    const { name, branch, subject } = req.body;
+    const date = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+
+    if (!name || !branch || !subject) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const attendanceData = `${name},${branch},${date},${subject},Present\n`;
+
+    fs.appendFile(ATTENDANCE_FILE, attendanceData, (err) => {
+        if (err) {
+            console.error('Error appending to attendance file:', err);
+            return res.status(500).json({ error: 'Failed to record attendance' });
+        }
+
+        // Send data to Discord webhook
+        const embed = {
+            title: 'Student Attendance Recorded',
+            fields: [
+                { name: 'Student Name', value: name },
+                { name: 'Branch', value: branch },
+                { name: 'Subject', value: subject },
+                { name: 'Date', value: date }
+            ],
+            image: { url: 'https://cdn.discordapp.com/attachments/935622008136429588/1257604789882060860/standard.gif?ex=6685033b&is=6683b1bb&hm=3bde77e68241f376a083ef720b98470bdd1f539aae92f2e32a7d04b1393c923f&' }
+        };
+
+        fetch(DISCORD_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ embeds: [embed] })
         })
+        .then(response => response.json())
         .then(() => {
-            res.json({ message: 'Attendance Recorded And Notification Sent' });
+            res.status(200).json({ message: 'Attendance recorded successfully' });
         })
-        .catch(() => {
-            res.status(500).json({ message: 'Failed To Send Notification' });
+        .catch(error => {
+            console.error('Error sending webhook:', error);
+            res.status(500).json({ error: 'Failed to send webhook' });
         });
     });
 });
 
-// Start the server
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`Server running on port ${port}`);
 });
