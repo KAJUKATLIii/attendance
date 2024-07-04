@@ -1,17 +1,10 @@
-import { Client, GatewayIntentBits } from 'discord.js';
-import fs from 'fs';
-import csv from 'csv-parser';
+require('dotenv').config();
+const { Client, GatewayIntentBits } = require('discord.js');
+const fs = require('fs');
+const csv = require('csv-parser');
 
-// Initialize Discord client
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
-});
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
-// Discord bot token
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 
 client.once('ready', () => {
@@ -25,9 +18,9 @@ client.on('messageCreate', async (message) => {
     const command = args.shift().toLowerCase();
 
     if (command === '!attendance') {
-        const studentName = args.join(' ');
-        if (!studentName) {
-            return message.reply('Please provide a student name.');
+        const barcode = args[0];
+        if (!barcode) {
+            return message.reply('Please provide a barcode.');
         }
 
         const attendanceData = [];
@@ -35,13 +28,13 @@ client.on('messageCreate', async (message) => {
         fs.createReadStream('attendance.csv')
             .pipe(csv())
             .on('data', (row) => {
-                if (row.name === studentName) {
+                if (row.barcode === barcode) {
                     attendanceData.push(row);
                 }
             })
             .on('end', () => {
                 const attendanceCount = attendanceData.length;
-                message.reply(`${studentName} was present for ${attendanceCount} days.`);
+                message.reply(`${barcode} was recorded for ${attendanceCount} days.`);
             })
             .on('error', (error) => {
                 console.error('Error reading attendance file:', error);
@@ -50,5 +43,4 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// Login to Discord
 client.login(DISCORD_BOT_TOKEN);
