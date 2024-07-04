@@ -1,57 +1,62 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const video = document.getElementById('video');
-    const scanButton = document.getElementById('scan-button');
-    const responseDiv = document.getElementById('response');
+import jsQR from 'jsqr'; // Ensure jsqr is installed (`npm install jsqr`)
 
-    let codeReader = new ZXing.BrowserBarcodeReader();
-    
-    codeReader.listVideoInputDevices().then((videoInputDevices) => {
-        const firstDeviceId = videoInputDevices[0].deviceId;
-        codeReader.decodeOnceFromVideoDevice(firstDeviceId, 'video').then((result) => {
-            handleScanResult(result.text);
-        }).catch((err) => {
-            console.error(err);
-            responseDiv.innerText = 'Error scanning QR code.';
-        });
-    }).catch((err) => {
-        console.error(err);
-    });
+const fileInput = document.getElementById('fileInput');
+const statusDiv = document.getElementById('status');
+const scannerContainer = document.getElementById('scanner-container');
 
-    scanButton.addEventListener('click', () => {
-        const barcode = responseDiv.innerText; // Barcode/QR code result is displayed in responseDiv
-        const subject = document.querySelector('.subject-button.active')?.dataset.subject;
+fileInput.addEventListener('change', handleFileSelect);
 
-        if (!barcode || !subject) {
-            alert('Please scan a barcode and select a subject.');
-            return;
-        }
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0, img.width, img.height);
 
-        const branch = 'Your Branch Name'; // Replace this with actual branch name
+                const imageData = ctx.getImageData(0, 0, img.width, img.height);
+                const code = jsQR(imageData.data, img.width, img.height);
 
-        fetch('/scan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ barcode, branch, date: new Date().toISOString().split('T')[0], subject })
-        })
-        .then(response => response.json())
-        .then(data => {
-            responseDiv.innerText = data.message;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            responseDiv.innerText = 'Error recording attendance.';
-        });
-    });
-
-    document.querySelectorAll('.subject-button').forEach(button => {
-        button.addEventListener('click', () => {
-            document.querySelectorAll('.subject-button').forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-        });
-    });
-
-    function handleScanResult(resultText) {
-        responseDiv.innerText = `Scanned Barcode/QR Code: ${resultText}`;
-        // You may call the scan button handler or any other function if required here
+                if (code) {
+                    const barcode = code.data;
+                    statusDiv.innerText = `Barcode detected: ${barcode}`;
+                    submitAttendance(barcode);
+                } else {
+                    statusDiv.innerText = 'No QR code or barcode found.';
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
     }
-});
+}
+
+async function submitAttendance(barcode) {
+    const date = new Date().toISOString().split('T')[0];
+    const branch = 'Default Branch'; // Update as necessary
+
+    try {
+        const response = await fetch('/attendance', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ barcode, date, branch })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            statusDiv.innerText = result.message;
+        } else {
+            statusDiv.innerText = `Error: ${result.message}`;
+        }
+    } catch (error) {
+        console.error('Error submitting attendance:', error);
+        statusDiv.innerText = 'Error submitting attendance.';
+    }
+}
